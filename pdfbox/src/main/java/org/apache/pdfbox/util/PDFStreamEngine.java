@@ -45,15 +45,12 @@ import org.apache.pdfbox.pdmodel.font.PDType3Font;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
 import org.apache.pdfbox.pdmodel.graphics.state.PDGraphicsState;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
-import org.apache.pdfbox.text.TextPosition;
 import org.apache.pdfbox.util.operator.OperatorProcessor;
 import org.apache.pdfbox.util.operator.PDFOperator;
 
 /**
  * Processes a PDF content stream and executes certain operations.
  * Provides a callback interface for clients that want to do things with the stream.
- *
- * @see org.apache.pdfbox.util.PDFTextStripper
  * 
  * @author Ben Litchfield
  */
@@ -62,18 +59,13 @@ public class PDFStreamEngine
     private static final Log LOG = LogFactory.getLog(PDFStreamEngine.class);
 
     private final Set<String> unsupportedOperators = new HashSet<String>();
-    private Map<String, OperatorProcessor> operators = new HashMap<String, OperatorProcessor>();
-
-    private PDGraphicsState graphicsState;
+    private final Map<String, OperatorProcessor> operators = new HashMap<String, OperatorProcessor>();
 
     private Matrix textMatrix;
     private Matrix textLineMatrix;
-    private Stack<PDGraphicsState> graphicsStack = new Stack<PDGraphicsState>();
 
-    private Stack<PDResources> streamResourcesStack = new Stack<PDResources>();
-
-    private int pageRotation;
-    private PDRectangle drawingRectangle;
+    private final Stack<PDGraphicsState> graphicsStack = new Stack<PDGraphicsState>();
+    private final Stack<PDResources> streamResourcesStack = new Stack<PDResources>();
 
     // skip malformed or otherwise unparseable input where possible
     private boolean forceParsing;
@@ -167,29 +159,16 @@ public class PDFStreamEngine
     }
 
     /**
-     * This method must be called between processing documents. The PDFStreamEngine caches
-     * information for the document between pages and this will release the cached information.
-     * This only needs to be called if processing a new document.
-     */
-    public void resetEngine()
-    {
-        // overridden in subclasses
-    }
-
-    /**
      * Initialises a stream for processing.
      *
      * @param drawingSize the size of the page
-     * @param rotation the page rotation
      */
-    protected void initStream(PDRectangle drawingSize, int rotation)
+    protected void initStream(PDRectangle drawingSize)
     {
-        drawingRectangle = drawingSize;
-        pageRotation = rotation;
-        graphicsState = new PDGraphicsState(drawingRectangle);
+        graphicsStack.clear();
+        graphicsStack.push(new PDGraphicsState(drawingSize));
         textMatrix = null;
         textLineMatrix = null;
-        graphicsStack.clear();
         streamResourcesStack.clear();
     }
 
@@ -199,13 +178,12 @@ public class PDFStreamEngine
      * @param resources The location to retrieve resources.
      * @param cosStream the Stream to execute.
      * @param drawingSize the size of the page
-     * @param rotation the page rotation
      * @throws IOException if there is an error accessing the stream.
      */
-    public void processStream(PDResources resources, COSStream cosStream, PDRectangle drawingSize,
-                              int rotation) throws IOException
+    public void processStream(PDResources resources, COSStream cosStream, PDRectangle drawingSize)
+            throws IOException
     {
-        initStream(drawingSize, rotation);
+        initStream(drawingSize);
         processSubStream(resources, cosStream);
     }
 
@@ -218,6 +196,13 @@ public class PDFStreamEngine
      */
     public void processSubStream(PDResources resources, COSStream cosStream) throws IOException
     {
+        // sanity check
+        if (graphicsStack.isEmpty())
+        {
+            throw new IllegalStateException("Call to processSubStream() before processStream() " +
+                                            "or initStream()");
+        }
+
         if (resources != null)
         {
             streamResourcesStack.push(resources);
@@ -227,7 +212,7 @@ public class PDFStreamEngine
             }
             finally
             {
-                streamResourcesStack.pop().clear();
+                streamResourcesStack.pop().clearCache();
             }
         }
         else
@@ -272,19 +257,32 @@ public class PDFStreamEngine
     }
 
     /**
-     * Process encoded text from the PDF Stream. You should override this method if you want to
+     * Called when the BT operator is encountered. This method is for overriding in subclasses, the
+     * default implementation does nothing.
+     *
+     * @throws IOException if there was an error processing the text
+     */
+    public void beginText() throws IOException
+    {
+        // overridden in subclasses
+    }
+
+    /**
+     * Process text from the PDF Stream. You should override this method if you want to
      * perform an action when encoded text is being processed.
      * 
      * @param string The encoded text
      * @throws IOException If there is an error processing the string
      */
-    public void processEncodedText(byte[] string) throws IOException
+    public void processText(byte[] string) throws IOException
     {
         // Note on variable names. There are three different units being used in this code.
         // Character sizes are given in glyph units, text locations are initially given in text
         // units, and we want to save the data in display units. The variable names should end with
         // Text or Disp to represent if the values are in text or disp units (no glyph units are
         // saved).
+
+        PDGraphicsState graphicsState = getGraphicsState();
 
         final float fontSizeText = graphicsState.getTextState().getFontSize();
         final float horizontalScalingText = graphicsState.getTextState().getHorizontalScaling() / 100f;
@@ -301,47 +299,20 @@ public class PDFStreamEngine
         // all fonts have the width/height of a character in thousandths of a unit of text space
         float fontMatrixXScaling = 1 / 1000f;
         float fontMatrixYScaling = 1 / 1000f;
-        float glyphSpaceToTextSpaceFactor = 1 / 1000f;
         // expect Type3 fonts, those are providing the width of a character in glyph space units
         if (font instanceof PDType3Font)
         {
             PDMatrix fontMatrix = font.getFontMatrix();
             fontMatrixXScaling = fontMatrix.getValue(0, 0);
             fontMatrixYScaling = fontMatrix.getValue(1, 1);
-            // This will typically be 1000 but in the case of a type3 font
-            // this might be a different number
-            glyphSpaceToTextSpaceFactor = 1f / fontMatrix.getValue(0, 0);
-        }
-        float spaceWidthText = 0;
-        try
-        {
-            // to avoid crash as described in PDFBOX-614, see what the space displacement should be
-            spaceWidthText = font.getSpaceWidth() * glyphSpaceToTextSpaceFactor;
-        }
-        catch (Throwable exception)
-        {
-            LOG.warn(exception, exception);
         }
 
-        if (spaceWidthText == 0)
-        {
-            spaceWidthText = font.getAverageFontWidth() * glyphSpaceToTextSpaceFactor;
-            // the average space width appears to be higher than necessary so make it smaller
-            spaceWidthText *= .80f;
-        }
-        if (spaceWidthText == 0)
-        {
-            spaceWidthText = 1.0f; // if could not find font, use a generic value
-        }
         float maxVerticalDisplacementText = 0;
 
         Matrix textStateParameters = new Matrix();
         textStateParameters.setValue(0, 0, fontSizeText * horizontalScalingText);
         textStateParameters.setValue(1, 1, fontSizeText);
         textStateParameters.setValue(2, 1, riseText);
-
-        float pageHeight = drawingRectangle.getHeight();
-        float pageWidth = drawingRectangle.getWidth();
 
         Matrix ctm = getGraphicsState().getCurrentTransformationMatrix();
         Matrix textXctm = new Matrix();
@@ -354,23 +325,19 @@ public class PDFStreamEngine
         {
             // Decode the value to a Unicode character
             codeLength = 1;
-            String c = font.encode(string, i, codeLength);
-            int[] codePoints;
-            if (c == null && i + 1 < string.length)
+            String unicode = font.encode(string, i, codeLength);
+            int[] charCodes;
+            if (unicode == null && i + 1 < string.length)
             {
                 // maybe a multibyte encoding
                 codeLength++;
-                c = font.encode(string, i, codeLength);
-                codePoints = new int[] { font.getCodeFromArray(string, i, codeLength) };
+                unicode = font.encode(string, i, codeLength);
+                charCodes = new int[] { font.getCodeFromArray(string, i, codeLength) };
             }
             else
             {
-                codePoints = new int[] { font.getCodeFromArray(string, i, codeLength) };
+                charCodes = new int[] { font.getCodeFromArray(string, i, codeLength) };
             }
-
-            // the space width has to be transformed into display units
-            float spaceWidthDisp = spaceWidthText * fontSizeText * horizontalScalingText *
-                    textMatrix.getXScale()  * ctm.getXScale();
 
             // TODO: handle horizontal displacement
             // get the width and height of this character in text units
@@ -443,32 +410,35 @@ public class PDFStreamEngine
             float startXPosition = textMatrixStart.getXPosition();
             float widthText = endXPosition - startXPosition;
 
-            // PDFBOX-373: Replace a null entry with "?" so it is not printed as "(null)"
-            if (c == null)
-            {
-                c = "?";
-            }
-
             float totalVerticalDisplacementDisp = maxVerticalDisplacementText * fontSizeText *
                     textXctm.getYScale();
 
-            // process the decoded text
-            processTextPosition(new TextPosition(pageRotation, pageWidth, pageHeight,
-                    textMatrixStart, endXPosition, endYPosition, totalVerticalDisplacementDisp,
-                    widthText, spaceWidthDisp, c, codePoints, font, fontSizeText,
-                    (int)(fontSizeText * textMatrix.getXScale())));
+            // process the decoded glyph
+            processGlyph(textMatrixStart, new Point2D.Float(endXPosition, endYPosition),
+                    totalVerticalDisplacementDisp, widthText, unicode, charCodes,
+                    font, fontSizeText);
         }
     }
 
     /**
-     * A method provided as an event interface to allow a subclass to perform some specific
-     * functionality when text needs to be processed.
+     * Called when a glyph is to be processed.This method is intended for overriding in subclasses,
+     * the default implementation does nothing.
      *
-     * @param text The text to be processed.
+     * @param textMatrix the text matrix at the start of the glyph
+     * @param end the end position of the glyph in text space
+     * @param maxHeight the height of the glyph in device space
+     * @param widthText the width of the glyph in text space
+     * @param unicode the Unicode text for this glyph, or null. May be meaningless.
+     * @param charCodes array of internal PDF character codes for the glyph todo: should be 1 code?
+     * @param font the current font
+     * @param fontSize font size in text space
+     * @throws IOException if the glyph cannot be processed
      */
-    protected void processTextPosition(TextPosition text)
+    protected void processGlyph(Matrix textMatrix, Point2D.Float end, float maxHeight,
+                                float widthText, String unicode, int[] charCodes, PDFont font,
+                                float fontSize) throws IOException
     {
-        // subclasses can override to provide specific functionality.
+        // overridden in subclasses
     }
 
     /**
@@ -528,7 +498,7 @@ public class PDFStreamEngine
     /**
      * @return Returns the fonts.
      */
-    public Map<String, PDFont> getFonts()
+    public Map<String, PDFont> getFonts() throws IOException
     {
         if (streamResourcesStack.isEmpty())
         {
@@ -551,7 +521,7 @@ public class PDFStreamEngine
      */
     public void saveGraphicsState()
     {
-        graphicsStack.push(getGraphicsState().clone());
+        graphicsStack.push(graphicsStack.peek().clone());
     }
 
     /**
@@ -559,7 +529,7 @@ public class PDFStreamEngine
      */
     public void restoreGraphicsState()
     {
-        graphicsState = graphicsStack.pop();
+        graphicsStack.pop();
     }
 
     /**
@@ -575,15 +545,7 @@ public class PDFStreamEngine
      */
     public PDGraphicsState getGraphicsState()
     {
-        return graphicsState;
-    }
-
-    /**
-     * @param value The graphicsState to set.
-     */
-    public void setGraphicsState(PDGraphicsState value)
-    {
-        graphicsState = value;
+        return graphicsStack.peek();
     }
 
     /**
@@ -592,14 +554,6 @@ public class PDFStreamEngine
     public Map<String, PDExtendedGraphicsState> getGraphicsStates()
     {
         return streamResourcesStack.peek().getGraphicsStates();
-    }
-
-    /**
-     * @param value The graphicsStates to set.
-     */
-    public void setGraphicsStates(Map<String, PDExtendedGraphicsState> value)
-    {
-        streamResourcesStack.peek().setGraphicsStates(value);
     }
 
     /**
@@ -686,42 +640,8 @@ public class PDFStreamEngine
     protected float transformWidth(float width)
     {
         Matrix ctm = getGraphicsState().getCurrentTransformationMatrix();
-
-        if (ctm == null)
-        {
-            // TODO does the CTM really need to use null?
-            return width;
-        }
-
         float x = ctm.getValue(0, 0) + ctm.getValue(1, 0);
         float y = ctm.getValue(0, 1) + ctm.getValue(1, 1);
         return width * (float)Math.sqrt((x * x + y * y) * 0.5);
-    }
-
-    /**
-     * Remove all cached resources.
-     */
-    public void dispose()
-    {
-        drawingRectangle = null;
-        graphicsState = null;
-        textLineMatrix = null;
-        textMatrix = null;
-        if (graphicsStack != null)
-        {
-            graphicsStack.clear();
-            graphicsStack = null;
-        }
-        if (streamResourcesStack != null)
-        {
-            streamResourcesStack.clear();
-            streamResourcesStack = null;
-        }
-        if (operators != null)
-        {
-            operators.clear();
-            operators = null;
-        }
-        unsupportedOperators.clear();
     }
 }

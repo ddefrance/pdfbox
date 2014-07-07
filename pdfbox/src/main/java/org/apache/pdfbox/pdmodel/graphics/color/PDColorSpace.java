@@ -19,6 +19,7 @@ package org.apache.pdfbox.pdmodel.graphics.color;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.graphics.pattern.PDAbstractPattern;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -67,7 +68,11 @@ public abstract class PDColorSpace implements COSObjectable
                                       Map<String, PDAbstractPattern> patterns)
                                       throws IOException
     {
-        if (colorSpace instanceof COSName)
+        if (colorSpace instanceof COSObject)
+        {
+            return create(((COSObject) colorSpace).getObject(), colorSpaces, patterns);
+        }
+        else if (colorSpace instanceof COSName)
         {
             COSName name = (COSName)colorSpace;
 
@@ -143,6 +148,13 @@ public abstract class PDColorSpace implements COSObjectable
                 {
                     return new PDPattern(patterns, PDColorSpace.create(array.get(1)));
                 }
+            }
+            else if (name == COSName.DEVICECMYK || name == COSName.CMYK ||
+                     name == COSName.DEVICERGB  || name == COSName.RGB ||
+                     name == COSName.DEVICEGRAY || name == COSName.PATTERN)
+            {
+                // not allowed in an array, but we sometimes encounter these regardless
+                return create(name, colorSpaces, patterns);
             }
             else
             {

@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.common.COSDictionaryMap;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.font.PDFont;
@@ -101,9 +102,8 @@ public class PDResources implements COSObjectable
 
     /**
      * Calling this will release all cached information.
-     * 
      */
-    public void clear()
+    public void clearCache()
     {
         if (fonts != null)
         {
@@ -128,7 +128,7 @@ public class PDResources implements COSObjectable
         {
             for(PDXObject xobject : xobjects.values())
             {
-                xobject.clear();
+                xobject.clearCache();
             }
             xobjects.clear();
             xobjects = null;
@@ -181,7 +181,7 @@ public class PDResources implements COSObjectable
      * 
      * @return The map of fonts.
      */
-    public Map<String, PDFont> getFonts()
+    public Map<String, PDFont> getFonts() throws IOException
     {
         if (fonts == null)
         {
@@ -203,19 +203,8 @@ public class PDResources implements COSObjectable
                     // PDF, we will just ignore entries that are not dictionaries.
                     if (font instanceof COSDictionary)
                     {
-                        PDFont newFont = null;
-                        try
-                        {
-                            newFont = PDFontFactory.createFont((COSDictionary) font);
-                        }
-                        catch (IOException exception)
-                        {
-                            LOG.error("error while creating a font", exception);
-                        }
-                        if (newFont != null)
-                        {
-                            fonts.put(fontName.getName(), newFont);
-                        }
+                        PDFont newFont = PDFontFactory.createFont((COSDictionary) font);
+                        fonts.put(fontName.getName(), newFont);
                     }
                 }
             }
@@ -252,8 +241,11 @@ public class PDResources implements COSObjectable
                     PDXObject xobject = null;
                     try
                     {
-                        xobject = PDXObject.createXObject(dict.getDictionaryObject(objName),
-                                                          objName.getName(), this);
+                        String name = objName.getName() + "#";
+                        COSObject cosObject = (COSObject)dict.getItem(objName);
+                        // add the object number to create an unique identifier
+                        name += cosObject.getObjectNumber().intValue();
+                        xobject = PDXObject.createXObject(cosObject.getObject(), name, this);
                     }
                     catch (IOException exception)
                     {
@@ -552,7 +544,7 @@ public class PDResources implements COSObjectable
      * @param font the font to be added
      * @return the font name to be used within the content stream.
      */
-    public String addFont(PDFont font)
+    public String addFont(PDFont font) throws IOException
     {
         // use the getter to initialize a possible empty fonts map
         return addFont(font, getNextUniqueKey(getFonts(), "F"));
@@ -565,7 +557,7 @@ public class PDResources implements COSObjectable
      * @param fontKey key to used to map to the given font
      * @return the font name to be used within the content stream.
      */
-    public String addFont(PDFont font, String fontKey)
+    public String addFont(PDFont font, String fontKey) throws IOException
     {
         if (fonts == null)
         {

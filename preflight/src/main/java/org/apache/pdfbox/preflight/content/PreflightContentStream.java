@@ -72,7 +72,7 @@ public class PreflightContentStream extends PreflightStreamEngine
             if (pstream != null)
             {
                 processStream(processeedPage.findResources(), pstream.getStream(), 
-                		processeedPage.findCropBox(), processeedPage.findRotation());
+                		processeedPage.findCropBox());
             }
         }
         catch (ContentStreamException e)
@@ -96,6 +96,7 @@ public class PreflightContentStream extends PreflightStreamEngine
     {
         try
         {
+            initStream(xobj.getBBox());
             processSubStream(xobj.getResources(), xobj.getCOSStream());
         }
         catch (ContentStreamException e)
@@ -120,6 +121,7 @@ public class PreflightContentStream extends PreflightStreamEngine
         try
         {
             COSDictionary res = (COSDictionary) pattern.getDictionaryObject(COSName.RESOURCES);
+            initStream(processeedPage.findCropBox());
             processSubStream(new PDResources(res), pattern);
         }
         catch (ContentStreamException e)

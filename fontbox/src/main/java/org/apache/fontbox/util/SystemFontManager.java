@@ -32,25 +32,19 @@ import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.fontbox.util.autodetect.FontFileFinder;
 
 /**
- * This class is used as manager for local fonts. It's based on the font manager provided by Apache FOP. see
- * org.apache.fop.fonts.FontManager.java
+ * System font manager. Based on the font manager provided by Apache FOP.
+ *
+ * See: org.apache.fop.fonts.FontManager
  */
-
-public class FontManager
+public class SystemFontManager
 {
-    /**
-     * Log instance.
-     */
-    private static final Log LOG = LogFactory.getLog(FontManager.class);
+    private static final Log LOG = LogFactory.getLog(SystemFontManager.class);
 
     private static HashMap<String, String> ttfFontfiles = new HashMap<String, String>();
-
     private static boolean fontsLoaded = false;
-
-    // HashMap with all known true type fonts
     private static HashMap<String, String> fontMappingTTF = new HashMap<String, String>();
 
-    private FontManager()
+    private SystemFontManager()
     {
     }
 
@@ -318,20 +312,20 @@ public class FontManager
      * Search for a true type font for the given font name.
      * 
      * @param fontname the given font name
-     * @return the mapped true type font
+     * @return the mapped true type font, or null if none could be found
      * @throws IOException if something went wrong
      */
     public static TrueTypeFont findTTFont(String fontname) throws IOException
     {
-        String ttffontname = findTTFontname(fontname);
+        String ttfFontName = findTTFontname(fontname);
         TrueTypeFont ttfFont = null;
-        if (ttffontname != null)
+        if (ttfFontName != null)
         {
             TTFParser ttfParser = new TTFParser();
-            InputStream fontStream = ResourceLoader.loadResource(ttffontname);
+            InputStream fontStream = ResourceLoader.loadResource(ttfFontName);
             if (fontStream == null)
             {
-                throw new IOException("Can't load external font: " + ttffontname);
+                throw new IOException("Can't load external font: " + ttfFontName);
             }
             ttfFont = ttfParser.parseTTF(fontStream);
         }

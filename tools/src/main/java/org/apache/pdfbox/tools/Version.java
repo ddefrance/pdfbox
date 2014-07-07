@@ -50,13 +50,12 @@ public class Version
         try
         {
             Properties props = ResourceLoader.loadProperties( PDFBOX_VERSION_PROPERTIES, false );
-            version = props.getProperty( "pdfbox.version", version );
+            return props.getProperty( "pdfbox.version", version );
         }
         catch( IOException io )
         {
             //if there is a problem loading the properties then don't throw an
             //exception, 'unknown' will be returned instead.
-            io.printStackTrace();
         }
         return version;
     }
@@ -68,6 +67,9 @@ public class Version
      */
     public static void main(String[] args)
     {
+        // suppress the Dock icon on OS X
+        System.setProperty("apple.awt.UIElement", "true");
+
         if( args.length != 0 )
         {
             usage();
