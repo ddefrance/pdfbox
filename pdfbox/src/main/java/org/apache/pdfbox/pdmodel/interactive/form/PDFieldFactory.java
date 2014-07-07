@@ -108,8 +108,11 @@ public final class PDFieldFactory
         {
             // sometimes if it is a button the type is only defined by one of the kids entries
             // TODO JH: this is due to inheritance, we need proper support for "non-terminal fields"
-
-            COSDictionary kid = (COSDictionary)kids.get(0).getCOSObject();
+            COSObjectable kidObject = kids.get(0);
+            if (kidObject== null) {
+                return false;
+            }
+            COSDictionary kid = (COSDictionary)kidObject.getCOSObject();
             return isButton(form, kid);
         }
         return "Btn".equals(fieldType);

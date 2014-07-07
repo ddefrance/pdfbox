@@ -546,10 +546,12 @@ public abstract class PDField implements COSObjectable
                 }
                 else
                 {
-                    PDField field = PDFieldFactory.createField(form, kidDictionary);
-                    if (field != null)
-                    {
-                        kidsList.add(field);
+                    PDField kidField = PDFieldFactory.createField(form, kidDictionary);
+                    if (kidField != null) {
+                        kidsList.add(kidField);
+                    } else {
+                        // Recursively go in until there are no more kids
+                        kidsList.addAll(getKids(form, kidDictionary));
                     }
                 }
             }

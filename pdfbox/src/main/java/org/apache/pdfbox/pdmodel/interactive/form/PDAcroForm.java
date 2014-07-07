@@ -21,10 +21,8 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
-
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDResources;
-
 import org.apache.pdfbox.pdmodel.common.COSArrayList;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.fdf.FDFDictionary;
@@ -33,7 +31,6 @@ import org.apache.pdfbox.pdmodel.fdf.FDFCatalog;
 import org.apache.pdfbox.pdmodel.fdf.FDFField;
 
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -203,6 +200,14 @@ public final class PDAcroForm implements COSObjectable
                 if( field != null )
                 {
                     pdFields.add(field);
+                } else {
+                    // The field itself might be null, but it might have children
+                    List<COSObjectable> kids = PDField.getKids(this, element);
+                    for (COSObjectable kid : kids) {
+                        if (kid != null) {
+                            pdFields.add((PDField) kid);
+                        }
+                    }
                 }
             }
         }

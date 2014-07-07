@@ -65,6 +65,14 @@
       </plugin>
     </plugins>
   </build>
+  
+  <distributionManagement>
+    <repository>
+      <id>worqle-snapshot</id>
+      <name>Worqle Snapshot Internal Repository</name>
+      <url>https://repository-worqle.forge.cloudbees.com/snapshot/</url>
+    </repository>
+  </distributionManagement>
 
   <profiles>
     <profile>

@@ -1,0 +1,23 @@
+mvn deploy:deploy-file -DgroupId=org.apache.pdfbox \
+  -DartifactId=fontbox \
+  -Dversion=2.0.0-SNAPSHOT \
+  -Dpackaging=jar \
+  -Dfile=./fontbox/target/fontbox-2.0.0-SNAPSHOT.jar \
+  -DrepositoryId=worqle-snapshot \
+  -Durl=https://repository-worqle.forge.cloudbees.com/snapshot/
+  
+mvn deploy:deploy-file -DgroupId=org.apache.pdfbox \
+  -DartifactId=jempbox \
+  -Dversion=2.0.0-SNAPSHOT \
+  -Dpackaging=jar \
+  -Dfile=./jempbox/target/jempbox-2.0.0-SNAPSHOT.jar \
+  -DrepositoryId=worqle-snapshot \
+  -Durl=https://repository-worqle.forge.cloudbees.com/snapshot/
+  
+mvn deploy:deploy-file -DgroupId=org.apache.pdfbox \
+  -DartifactId=pdfbox \
+  -Dversion=2.0.0-SNAPSHOT \
+  -Dpackaging=jar \
+  -Dfile=./pdfbox/target/pdfbox-2.0.0-SNAPSHOT.jar \
+  -DrepositoryId=worqle-snapshot \
+  -Durl=https://repository-worqle.forge.cloudbees.com/snapshot/
