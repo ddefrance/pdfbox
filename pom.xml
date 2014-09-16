@@ -67,11 +67,12 @@
   </build>
   
   <distributionManagement>
-    <repository>
-      <id>worqle-snapshot</id>
-      <name>Worqle Snapshot Internal Repository</name>
-      <url>https://repository-worqle.forge.cloudbees.com/snapshot/</url>
-    </repository>
+    <snapshotRepository>
+      <uniqueVersion>true</uniqueVersion>
+      <id>thinkwork-snapshot</id>
+      <name>Thinkwork Snapshots</name>
+      <url>http://ec2-54-165-210-80.compute-1.amazonaws.com:8081/nexus/content/repositories/snapshots/</url>
+    </snapshotRepository>
   </distributionManagement>
 
   <profiles>
