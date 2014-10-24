@@ -54,7 +54,7 @@
       <uniqueVersion>true</uniqueVersion>
       <id>thinkwork-snapshot</id>
       <name>Thinkwork Snapshots</name>
-      <url>http://ec2-54-165-210-80.compute-1.amazonaws.com:8081/nexus/content/repositories/snapshots/</url>
+      <url>http://ec2-54-164-183-202.compute-1.amazonaws.com:8081/nexus/content/repositories/snapshots/</url>
     </snapshotRepository>
   </distributionManagement>
 
@@ -124,7 +124,7 @@
         <repository>
             <id>mygrid-repository</id>
             <name>myGrid Repository</name>
-            <url>http://www.mygrid.org.uk/maven/repository</url>
+            <url>http://ec2-54-164-183-202.compute-1.amazonaws.com:8081/nexus/content/groups/public/</url>
         </repository>
     </repositories>
   
