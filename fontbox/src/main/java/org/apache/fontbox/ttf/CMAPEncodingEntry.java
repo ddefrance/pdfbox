@@ -328,7 +328,8 @@ public class CMAPEncodingEntry
         int entryCount = data.readUnsignedShort();
         glyphIdToCharacterCode = new int[numGlyphs];
         int[] glyphIdArray = data.readUnsignedShortArray(entryCount);
-        for (int i = 0; i < entryCount; i++)
+        // Use the numGlyphs here because some embedded fonts have fewer glyphs than entry count (dingbats)
+        for (int i = 0; i < numGlyphs; i++)
         {
             glyphIdToCharacterCode[glyphIdArray[i]] = firstCode + i;
             characterCodeToGlyphId.put((firstCode + i), glyphIdArray[i]);
