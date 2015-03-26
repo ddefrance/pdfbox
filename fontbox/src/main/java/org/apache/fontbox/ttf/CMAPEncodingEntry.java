@@ -341,8 +341,14 @@ public class CMAPEncodingEntry
         // Use the numGlyphs here because some embedded fonts have fewer glyphs than entry count (dingbats)
         for (int i = 0; i < arraySize; i++)
         {
-            glyphIdToCharacterCode[glyphIdArray[i]] = firstCode + i;
-            characterCodeToGlyphId.put((firstCode + i), glyphIdArray[i]);
+            try {
+                glyphIdToCharacterCode[glyphIdArray[i]] = firstCode + i;
+                characterCodeToGlyphId.put((firstCode + i), glyphIdArray[i]);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                LOG.debug("*** ERROR *** ArraySize: " + arraySize + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs + ", i: " + i);
+                LOG.debug("*** ERROR *** glyphIdArray: " + glyphIdArray.length + ", glyphIdToCharacterCode: " + glyphIdToCharacterCode.length);
+                break;
+            }
         }
     }
 
