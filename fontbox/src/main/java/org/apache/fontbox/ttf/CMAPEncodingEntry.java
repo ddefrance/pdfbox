@@ -23,6 +23,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * An encoding entry for a cmap.
  * 
@@ -30,7 +33,8 @@ import java.util.Map.Entry;
  * 
  */
 public class CMAPEncodingEntry
-{
+{    
+    private static final Log LOG = LogFactory.getLog(CMAPEncodingEntry.class);
     private static final long LEAD_OFFSET = 0xD800 - (0x10000 >> 10);
     private static final long SURROGATE_OFFSET = 0x10000 - (0xD800 << 10) - 0xDC00;
 
@@ -326,8 +330,10 @@ public class CMAPEncodingEntry
     {
         int firstCode = data.readUnsignedShort();
         int entryCount = data.readUnsignedShort();
+        LOG.debug("*** First Code: " + firstCode + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs);
         glyphIdToCharacterCode = new int[numGlyphs];
         int[] glyphIdArray = data.readUnsignedShortArray(entryCount);
+        LOG.debug("*** glyphIdArray: " + glyphIdArray.length + ", glyphIdToCharacterCode: " + glyphIdToCharacterCode.length);
         // Use the numGlyphs here because some embedded fonts have fewer glyphs than entry count (dingbats)
         for (int i = 0; i < numGlyphs; i++)
         {
