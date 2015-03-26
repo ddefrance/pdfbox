@@ -330,23 +330,19 @@ public class CMAPEncodingEntry
     {
         int firstCode = data.readUnsignedShort();
         int entryCount = data.readUnsignedShort();
-        int arraySize = entryCount;
-        if (arraySize > numGlyphs) {
-            arraySize = numGlyphs;
-        }
-        LOG.debug("*** ArraySize: " + arraySize + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs);
-        glyphIdToCharacterCode = new int[arraySize];
-        int[] glyphIdArray = data.readUnsignedShortArray(arraySize);
+        LOG.debug("*** FirstCode: " + firstCode + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs);
+        glyphIdToCharacterCode = new int[numGlyphs];
+        int[] glyphIdArray = data.readUnsignedShortArray(entryCount);
         LOG.debug("*** glyphIdArray: " + glyphIdArray.length + ", glyphIdToCharacterCode: " + glyphIdToCharacterCode.length);
         // Use the numGlyphs here because some embedded fonts have fewer glyphs than entry count (dingbats)
-        for (int i = 0; i < arraySize; i++)
+        for (int i = 0; i < entryCount; i++)
         {
             try {
                 glyphIdToCharacterCode[glyphIdArray[i]] = firstCode + i;
                 characterCodeToGlyphId.put((firstCode + i), glyphIdArray[i]);
             } catch (ArrayIndexOutOfBoundsException e) {
                 LOG.debug("*** ERROR *** ArrayIndexOutOfBounds " + e.getMessage() + ", glyphIdArray[i]: " + glyphIdArray[i]);
-                LOG.debug("*** ERROR *** ArraySize: " + arraySize + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs + ", i: " + i);
+                LOG.debug("*** ERROR *** FirstCode: " + firstCode + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs + ", i: " + i);
                 LOG.debug("*** ERROR *** glyphIdArray: " + glyphIdArray.length + ", glyphIdToCharacterCode: " + glyphIdToCharacterCode.length);
                 break;
             }
