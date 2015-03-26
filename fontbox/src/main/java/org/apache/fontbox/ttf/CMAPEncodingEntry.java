@@ -345,6 +345,7 @@ public class CMAPEncodingEntry
                 glyphIdToCharacterCode[glyphIdArray[i]] = firstCode + i;
                 characterCodeToGlyphId.put((firstCode + i), glyphIdArray[i]);
             } catch (ArrayIndexOutOfBoundsException e) {
+                LOG.debug("*** ERROR *** ArrayIndexOutOfBounds " + e.getMessage() + ", glyphIdArray[i]: " + glyphIdArray[i]);
                 LOG.debug("*** ERROR *** ArraySize: " + arraySize + ", Entry Code: " + entryCount + ", numGlyps: " + numGlyphs + ", i: " + i);
                 LOG.debug("*** ERROR *** glyphIdArray: " + glyphIdArray.length + ", glyphIdToCharacterCode: " + glyphIdToCharacterCode.length);
                 break;
