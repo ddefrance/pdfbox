@@ -40,8 +40,10 @@ public class ShowText extends OperatorProcessor
      */
     public void process(PDFOperator operator, List<COSBase> arguments) throws IOException
     {
-        COSString string = (COSString)arguments.get( 0 );
-        context.processText(string.getBytes());
+        if (!arguments.isEmpty()) {
+            COSString string = (COSString)arguments.get( 0 );
+            context.processText(string.getBytes());
+        }
     }
 
 }
