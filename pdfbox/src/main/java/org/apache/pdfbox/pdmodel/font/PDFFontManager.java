@@ -262,6 +262,8 @@ public final class PDFFontManager
             while (keys.hasMoreElements()) 
             {
                 String key = (String)keys.nextElement();
+                String mapping = (String)fontMapping.get(key);
+                LOG.warn("Adding font mappings: " + key + "=" + mapping);
                 if (addFontMapping(key,(String)fontMapping.get(key)))
                 {
                     counter++;
