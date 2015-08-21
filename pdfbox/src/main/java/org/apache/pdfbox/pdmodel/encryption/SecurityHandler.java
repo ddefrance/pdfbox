@@ -332,7 +332,12 @@ public abstract class SecurityHandler
                     {
                         cipherStream.close();
                     }
-                }
+                } catch (IOException e) {
+                             Throwable cause = e.getCause();
+                             if (!(cause instanceof GeneralSecurityException)) {
+                               throw e;
+                            }
+                             }
                 catch (InvalidKeyException e)
                 {
                     throw new IOException(e);
